@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wakacyjny Kalkulator Wydatków</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── SETUP OVERLAY ─────────────────────────────────────── -->
+<div id="setup-overlay" class="overlay">
+  <div class="setup-card">
+    <h1>👋 Witaj! Skonfiguruj rodziny</h1>
+    <p class="text-muted mb-md">Podaj nazwy obu rodzin i imiona uczestników (oddzielone przecinkami).</p>
+
+    <div class="setup-family-block">
+      <h3>Rodzina 1</h3>
+      <div class="form-group">
+        <label>Nazwa rodziny</label>
+        <input id="setup-f1-name" class="form-control" type="text" placeholder="np. Kowalscy">
+      </div>
+      <div class="form-group">
+        <label>Uczestnicy (oddzieleni przecinkami)</label>
+        <input id="setup-f1-members" class="form-control" type="text" placeholder="np. Anna, Piotr, Kasia">
+      </div>
+    </div>
+
+    <div class="setup-family-block">
+      <h3>Rodzina 2</h3>
+      <div class="form-group">
+        <label>Nazwa rodziny</label>
+        <input id="setup-f2-name" class="form-control" type="text" placeholder="np. Nowakowie">
+      </div>
+      <div class="form-group">
+        <label>Uczestnicy (oddzieleni przecinkami)</label>
+        <input id="setup-f2-members" class="form-control" type="text" placeholder="np. Maria, Jan">
+      </div>
+    </div>
+
+    <button id="btn-save-setup" class="btn btn-primary btn-full">Zapisz i zacznij →</button>
+  </div>
+</div>
+
+<!-- ── APP ──────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <span class="app-title">🏖️ Wakacje</span>
+    <span class="header-total" id="header-total">0,00 zł</span>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="app-main">
+
+    <!-- ── DASHBOARD ──────────────────────────────────── -->
+    <section id="section-dashboard" class="section">
+      <div id="dashboard-cards" class="card-grid"></div>
+      <div id="dashboard-families" class="card-grid-2"></div>
+      <div id="dashboard-banner"></div>
+      <div class="section-header"><h2>Ostatnie transakcje</h2></div>
+      <div id="dashboard-recent"></div>
+      <div class="mt-md">
+        <button class="btn btn-primary btn-full" onclick="App.navigateTo('expenses')">Zobacz wszystkie wydatki →</button>
+      </div>
+    </section>
+
+    <!-- ── WYDATKI / WPŁYWY ───────────────────────────── -->
+    <section id="section-expenses" class="section">
+      <div class="mode-toggle">
+        <button class="mode-tab active" data-mode="expense">💰 Wydatki</button>
+        <button class="mode-tab" data-mode="income">📥 Wpływy</button>
+      </div>
+      <div class="filter-bar">
+        <select id="filter-category" class="form-control">
+          <option value="">Wszystkie kategorie</option>
+        </select>
+        <select id="filter-family" class="form-control">
+          <option value="">Wszystkie rodziny</option>
+        </select>
+        <input id="filter-search" class="form-control" type="search" placeholder="Szukaj…">
+      </div>
+      <div id="transaction-list"></div>
+    </section>
+
+    <!-- ── ROZLICZENIE ────────────────────────────────── -->
+    <section id="section-settlement" class="section">
+      <div id="settlement-banner" class="settlement-result empty">
+        <div class="sett-icon">📋</div>
+        <div class="sett-text">Brak wydatków.</div>
+      </div>
+
+      <div class="card">
+        <div class="split-control">
+          <div class="split-labels">
+            <span id="ratio-f1-name">Rodzina 1</span>
+            <span id="ratio-f2-name">Rodzina 2</span>
+          </div>
+          <div class="split-values">
+            <span id="ratio-f1-val">50%</span>
+            <span id="ratio-f2-val">50%</span>
+          </div>
+          <input id="ratio-slider" type="range" min="0" max="100" value="50">
+          <p class="text-muted mt-md" style="font-size:.8rem">Przesuń suwak, aby zmienić procentowy udział w kosztach.</p>
+        </div>
+      </div>
+
+      <div class="sett-summary">
+        <div class="stat-card">
+          <div class="stat-label">Wydatki</div>
+          <div class="stat-amount" id="sett-expense-total">0,00 zł</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Wpływy</div>
+          <div class="stat-amount income-color" id="sett-income-total">0,00 zł</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Do podziału</div>
+          <div class="stat-amount" id="sett-net-total">0,00 zł</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rodzina</th>
+              <th>Zapłacono</th>
+              <th>Wpłynęło</th>
+              <th>Należny udział</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody id="sett-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── STATYSTYKI ─────────────────────────────────── -->
+    <section id="section-stats" class="section">
+      <div class="chart-card">
+        <h3>Wydatki wg kategorii</h3>
+        <div class="chart-wrap">
+          <canvas id="chart-category"></canvas>
+          <p class="chart-empty">Brak danych do wyświetlenia</p>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Wydatki wg rodziny</h3>
+        <div class="chart-wrap">
+          <canvas id="chart-family"></canvas>
+          <p class="chart-empty">Brak danych do wyświetlenia</p>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Wydatki w czasie</h3>
+        <div class="chart-wrap">
+          <canvas id="chart-timeline"></canvas>
+          <p class="chart-empty">Brak danych do wyświetlenia</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── USTAWIENIA ─────────────────────────────────── -->
+    <section id="section-settings" class="section">
+
+      <div class="settings-block">
+        <h3>Rodzina 1</h3>
+        <div class="form-group">
+          <label>Nazwa rodziny</label>
+          <input id="settings-f1-name" class="form-control" type="text">
+        </div>
+        <div class="form-group">
+          <label>Uczestnicy (oddzieleni przecinkami)</label>
+          <input id="settings-f1-members" class="form-control" type="text">
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <h3>Rodzina 2</h3>
+        <div class="form-group">
+          <label>Nazwa rodziny</label>
+          <input id="settings-f2-name" class="form-control" type="text">
+        </div>
+        <div class="form-group">
+          <label>Uczestnicy (oddzieleni przecinkami)</label>
+          <input id="settings-f2-members" class="form-control" type="text">
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <h3>Waluta</h3>
+        <div class="form-group">
+          <label for="settings-eur-rate">Domyślny kurs EUR → PLN</label>
+          <input id="settings-eur-rate" class="form-control" type="number" min="0.001" step="0.001" placeholder="4.250">
+          <p class="text-muted mt-md" style="font-size:.8rem">Kurs podpowiadany automatycznie przy dodawaniu wydatku w euro.</p>
+        </div>
+      </div>
+
+      <button id="btn-save-settings" class="btn btn-primary btn-full mb-md">Zapisz ustawienia</button>
+
+      <div class="settings-block">
+        <h3>Strefa niebezpieczna</h3>
+        <div class="danger-zone">
+          <p>Usuwa wszystkie wydatki, wpływy i konfigurację rodzin. Tej operacji nie można cofnąć.</p>
+          <button id="btn-reset-data" class="btn btn-danger btn-full">Usuń wszystkie dane</button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" data-section="dashboard" role="tab">
+      <span class="tab-icon">🏠</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="tab-btn" data-section="expenses" role="tab">
+      <span class="tab-icon">💰</span>
+      <span>Transakcje</span>
+    </button>
+    <button class="tab-btn" data-section="settlement" role="tab">
+      <span class="tab-icon">⚖️</span>
+      <span>Rozliczenie</span>
+    </button>
+    <button class="tab-btn" data-section="stats" role="tab">
+      <span class="tab-icon">📊</span>
+      <span>Statystyki</span>
+    </button>
+    <button class="tab-btn" data-section="settings" role="tab">
+      <span class="tab-icon">⚙️</span>
+      <span>Ustawienia</span>
+    </button>
+  </nav>
+
+  <!-- FAB -->
+  <button class="fab" id="btn-fab" title="Dodaj transakcję">＋</button>
+
+</div><!-- #app -->
+
+<!-- ── ADD / EDIT MODAL ──────────────────────────────────── -->
+<div id="expense-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content">
+    <h2 id="modal-title">Dodaj wydatek</h2>
+    <form id="expense-form" novalidate>
+      <div class="form-group">
+        <label for="f-description">Opis</label>
+        <input id="f-description" class="form-control" type="text" placeholder="np. Obiad w restauracji" required>
+      </div>
+      <div class="form-group">
+        <label for="f-amount">Kwota</label>
+        <input id="f-amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00" required>
+      </div>
+      <div class="form-group">
+        <label for="f-currency">Waluta</label>
+        <select id="f-currency" class="form-control">
+          <option value="PLN">PLN – złoty polski</option>
+          <option value="EUR">EUR – euro</option>
+        </select>
+      </div>
+      <div class="form-group" id="f-rate-group" style="display:none">
+        <label for="f-exchange-rate">Kurs EUR → PLN</label>
+        <div class="currency-row">
+          <input id="f-exchange-rate" class="form-control" type="number" min="0.001" step="0.001" placeholder="4.250">
+          <span class="pln-preview" id="f-pln-preview">= 0,00 zł</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="f-category">Kategoria</label>
+        <select id="f-category" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label id="f-family-label" for="f-family">Kto zapłacił (rodzina)</label>
+        <select id="f-family" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label id="f-person-label" for="f-person">Kto zapłacił (osoba)</label>
+        <select id="f-person" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label for="f-date">Data</label>
+        <input id="f-date" class="form-control" type="date" required>
+      </div>
+      <div id="f-error" class="form-error"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Anuluj</button>
+        <button type="submit" class="btn btn-primary">Zapisz</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── CONFIRM MODAL ─────────────────────────────────────── -->
+<div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content modal-content--sm">
+    <p id="confirm-message">Czy na pewno?</p>
+    <div class="modal-actions">
+      <button id="btn-confirm-cancel" class="btn btn-secondary">Anuluj</button>
+      <button id="btn-confirm-ok" class="btn btn-danger">Potwierdź</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/expenses.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
