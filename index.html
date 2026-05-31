@@ -189,6 +189,15 @@
         </div>
       </div>
 
+      <div class="settings-block">
+        <h3>Waluta</h3>
+        <div class="form-group">
+          <label for="settings-eur-rate">Domyślny kurs EUR → PLN</label>
+          <input id="settings-eur-rate" class="form-control" type="number" min="0.001" step="0.001" placeholder="4.250">
+          <p class="text-muted mt-md" style="font-size:.8rem">Kurs podpowiadany automatycznie przy dodawaniu wydatku w euro.</p>
+        </div>
+      </div>
+
       <button id="btn-save-settings" class="btn btn-primary btn-full mb-md">Zapisz ustawienia</button>
 
       <div class="settings-block">
@@ -242,8 +251,22 @@
         <input id="f-description" class="form-control" type="text" placeholder="np. Obiad w restauracji" required>
       </div>
       <div class="form-group">
-        <label for="f-amount">Kwota (PLN)</label>
+        <label for="f-amount">Kwota</label>
         <input id="f-amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00" required>
+      </div>
+      <div class="form-group">
+        <label for="f-currency">Waluta</label>
+        <select id="f-currency" class="form-control">
+          <option value="PLN">PLN – złoty polski</option>
+          <option value="EUR">EUR – euro</option>
+        </select>
+      </div>
+      <div class="form-group" id="f-rate-group" style="display:none">
+        <label for="f-exchange-rate">Kurs EUR → PLN</label>
+        <div class="currency-row">
+          <input id="f-exchange-rate" class="form-control" type="number" min="0.001" step="0.001" placeholder="4.250">
+          <span class="pln-preview" id="f-pln-preview">= 0,00 zł</span>
+        </div>
       </div>
       <div class="form-group">
         <label for="f-category">Kategoria</label>

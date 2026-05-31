@@ -299,6 +299,12 @@ td { padding: 10px 12px; font-size: .88rem; border-top: 1px solid var(--border);
   .stat-amount { font-size: .95rem; }
 }
 
+/* ── CURRENCY ROW ────────────────────────────────────────── */
+.currency-row { display: flex; align-items: center; gap: var(--sp-sm); }
+.currency-row .form-control { flex: 1; }
+.pln-preview { font-size: .82rem; font-weight: 700; color: var(--primary); white-space: nowrap; min-width: 90px; text-align: right; }
+.pln-equiv { font-size: .78rem; color: var(--text-muted); font-weight: 400; }
+
 /* ── UTILITY ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .mb-md { margin-bottom: var(--sp-md); }

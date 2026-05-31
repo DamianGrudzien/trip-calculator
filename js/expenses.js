@@ -31,6 +31,9 @@ window.Expenses = (function () {
       id: Storage.generateId(),
       description: data.description.trim(),
       amount: parseFloat(data.amount),
+      currency: data.currency || 'PLN',
+      exchangeRate: parseFloat(data.exchangeRate) || 1.0,
+      amountPLN: parseFloat(data.amountPLN) || parseFloat(data.amount),
       category: data.category,
       paidByFamily: data.paidByFamily,
       paidByPerson: data.paidByPerson,
@@ -49,6 +52,9 @@ window.Expenses = (function () {
       ...state.expenses[idx],
       description: data.description.trim(),
       amount: parseFloat(data.amount),
+      currency: data.currency || 'PLN',
+      exchangeRate: parseFloat(data.exchangeRate) || 1.0,
+      amountPLN: parseFloat(data.amountPLN) || parseFloat(data.amount),
       category: data.category,
       paidByFamily: data.paidByFamily,
       paidByPerson: data.paidByPerson,
@@ -86,6 +92,9 @@ window.Expenses = (function () {
       id: Storage.generateId(),
       description: data.description.trim(),
       amount: parseFloat(data.amount),
+      currency: data.currency || 'PLN',
+      exchangeRate: parseFloat(data.exchangeRate) || 1.0,
+      amountPLN: parseFloat(data.amountPLN) || parseFloat(data.amount),
       category: data.category,
       receivedByFamily: data.receivedByFamily,
       receivedByPerson: data.receivedByPerson,
@@ -104,6 +113,9 @@ window.Expenses = (function () {
       ...state.incomes[idx],
       description: data.description.trim(),
       amount: parseFloat(data.amount),
+      currency: data.currency || 'PLN',
+      exchangeRate: parseFloat(data.exchangeRate) || 1.0,
+      amountPLN: parseFloat(data.amountPLN) || parseFloat(data.amount),
       category: data.category,
       receivedByFamily: data.receivedByFamily,
       receivedByPerson: data.receivedByPerson,
@@ -140,13 +152,13 @@ window.Expenses = (function () {
     const { families, expenses, incomes, settings } = state;
     const ratios = settings.splitRatio;
 
-    const expenseTotal = expenses.reduce((s, e) => s + e.amount, 0);
-    const incomeTotal  = incomes.reduce((s, i) => s + i.amount, 0);
+    const expenseTotal = expenses.reduce((s, e) => s + e.amountPLN, 0);
+    const incomeTotal  = incomes.reduce((s, i) => s + i.amountPLN, 0);
     const netTotal     = expenseTotal - incomeTotal;
 
     const result = families.map((fam, idx) => {
-      const paid     = expenses.filter(e => e.paidByFamily === fam.id).reduce((s, e) => s + e.amount, 0);
-      const received = incomes.filter(i => i.receivedByFamily === fam.id).reduce((s, i) => s + i.amount, 0);
+      const paid     = expenses.filter(e => e.paidByFamily === fam.id).reduce((s, e) => s + e.amountPLN, 0);
+      const received = incomes.filter(i => i.receivedByFamily === fam.id).reduce((s, i) => s + i.amountPLN, 0);
       const netContrib = paid - received;
       const fairShare  = netTotal * (ratios[idx] / 100);
       const balance    = netContrib - fairShare;
@@ -170,7 +182,7 @@ window.Expenses = (function () {
     const state = Storage.load();
     const totals = {};
     EXPENSE_CATEGORIES.forEach(c => { totals[c.id] = 0; });
-    state.expenses.forEach(e => { totals[e.category] = (totals[e.category] || 0) + e.amount; });
+    state.expenses.forEach(e => { totals[e.category] = (totals[e.category] || 0) + e.amountPLN; });
     return totals;
   }
 
@@ -178,7 +190,7 @@ window.Expenses = (function () {
     const state = Storage.load();
     const totals = {};
     state.families.forEach(f => { totals[f.id] = 0; });
-    state.expenses.forEach(e => { totals[e.paidByFamily] = (totals[e.paidByFamily] || 0) + e.amount; });
+    state.expenses.forEach(e => { totals[e.paidByFamily] = (totals[e.paidByFamily] || 0) + e.amountPLN; });
     return totals;
   }
 
@@ -186,7 +198,7 @@ window.Expenses = (function () {
     const state = Storage.load();
     const map = {};
     state.expenses.forEach(e => {
-      map[e.date] = (map[e.date] || 0) + e.amount;
+      map[e.date] = (map[e.date] || 0) + e.amountPLN;
     });
     const dates = Object.keys(map).sort();
     let running = 0;

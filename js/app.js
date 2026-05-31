@@ -188,6 +188,10 @@ window.App = (function () {
       const familyName = family ? family.name : '?';
       const sign = type === 'income' ? '+' : '-';
       const amountClass = type === 'income' ? 'income-color' : 'expense-color';
+      const isEur = item.currency === 'EUR';
+      const amountDisplay = isEur
+        ? `${sign}${formatEur(item.amount)} <span class="pln-equiv">(≈ ${formatCurrency(item.amountPLN)})</span>`
+        : `${sign}${formatCurrency(item.amountPLN)}`;
 
       return `<div class="transaction-item" data-id="${item.id}" data-type="${type}">
         <div class="cat-badge" style="background:${catInfo.color}20;color:${catInfo.color}">${catInfo.emoji}</div>
@@ -196,7 +200,7 @@ window.App = (function () {
           <div class="transaction-meta">${formatDate(item.date)} · ${escHtml(personName)} (${escHtml(familyName)})</div>
         </div>
         <div class="transaction-right">
-          <div class="transaction-amount ${amountClass}">${sign}${formatCurrency(item.amount)}</div>
+          <div class="transaction-amount ${amountClass}">${amountDisplay}</div>
           <div class="transaction-actions">
             <button class="btn-icon" data-action="edit" data-id="${item.id}" data-entry-type="${type}" title="Edytuj">✏️</button>
             <button class="btn-icon btn-icon-danger" data-action="delete" data-id="${item.id}" data-entry-type="${type}" title="Usuń">🗑️</button>
@@ -295,6 +299,16 @@ window.App = (function () {
     showModal('expense-modal');
   }
 
+  function toggleRateGroup(currency) {
+    document.getElementById('f-rate-group').style.display = currency === 'EUR' ? '' : 'none';
+  }
+
+  function updatePlnPreview() {
+    const amount = parseFloat(document.getElementById('f-amount').value) || 0;
+    const rate   = parseFloat(document.getElementById('f-exchange-rate').value) || 0;
+    document.getElementById('f-pln-preview').textContent = '= ' + formatCurrency(amount * rate);
+  }
+
   function populateModal(type, item) {
     const state = Storage.load();
     const isExpense = type === 'expense';
@@ -322,6 +336,9 @@ window.App = (function () {
       const personId = isExpense ? item.paidByPerson : item.receivedByPerson;
       document.getElementById('f-person').value = personId;
       document.getElementById('f-date').value = item.date;
+      document.getElementById('f-currency').value = item.currency || 'PLN';
+      document.getElementById('f-exchange-rate').value = item.exchangeRate || state.settings.defaultEurRate || 4.25;
+      toggleRateGroup(item.currency || 'PLN');
     } else {
       document.getElementById('f-description').value = '';
       document.getElementById('f-amount').value = '';
@@ -329,8 +346,12 @@ window.App = (function () {
       famSelect.value = state.families[0] ? state.families[0].id : '';
       populatePersonSelect(state.families[0] ? state.families[0].id : '');
       document.getElementById('f-date').value = todayISO();
+      document.getElementById('f-currency').value = 'PLN';
+      document.getElementById('f-exchange-rate').value = state.settings.defaultEurRate || 4.25;
+      toggleRateGroup('PLN');
     }
     document.getElementById('f-error').textContent = '';
+    updatePlnPreview();
   }
 
   function populatePersonSelect(familyId) {
@@ -352,17 +373,24 @@ window.App = (function () {
     const date = document.getElementById('f-date').value;
     const errEl = document.getElementById('f-error');
 
+    const currency = document.getElementById('f-currency').value;
+    const exchangeRate = currency === 'EUR'
+      ? (parseFloat(document.getElementById('f-exchange-rate').value) || 1)
+      : 1.0;
+    const amountPLN = amount * exchangeRate;
+
     if (!desc) { errEl.textContent = 'Podaj opis.'; return; }
     if (!amount || amount <= 0) { errEl.textContent = 'Podaj poprawną kwotę.'; return; }
+    if (currency === 'EUR' && exchangeRate <= 0) { errEl.textContent = 'Podaj poprawny kurs EUR.'; return; }
     if (!date) { errEl.textContent = 'Podaj datę.'; return; }
     errEl.textContent = '';
 
     if (editingType === 'expense') {
-      const data = { description: desc, amount, category, paidByFamily: familyId, paidByPerson: person, date };
+      const data = { description: desc, amount, currency, exchangeRate, amountPLN, category, paidByFamily: familyId, paidByPerson: person, date };
       if (editingId) Expenses.updateExpense(editingId, data);
       else Expenses.addExpense(data);
     } else {
-      const data = { description: desc, amount, category, receivedByFamily: familyId, receivedByPerson: person, date };
+      const data = { description: desc, amount, currency, exchangeRate, amountPLN, category, receivedByFamily: familyId, receivedByPerson: person, date };
       if (editingId) Expenses.updateIncome(editingId, data);
       else Expenses.addIncome(data);
     }
@@ -403,6 +431,7 @@ window.App = (function () {
       document.getElementById('settings-f2-name').value = state.families[1].name;
       document.getElementById('settings-f2-members').value = state.families[1].members.join(', ');
     }
+    document.getElementById('settings-eur-rate').value = state.settings.defaultEurRate || 4.25;
   }
 
   function saveSettings() {
@@ -415,6 +444,8 @@ window.App = (function () {
     state.families[0].members = parseMem(document.getElementById('settings-f1-members').value);
     state.families[1].name    = f2name;
     state.families[1].members = parseMem(document.getElementById('settings-f2-members').value);
+    const eurRate = parseFloat(document.getElementById('settings-eur-rate').value);
+    if (eurRate > 0) state.settings.defaultEurRate = eurRate;
     Storage.save(state);
     showToast('Ustawienia zapisane.');
   }
@@ -521,6 +552,14 @@ window.App = (function () {
       populatePersonSelect(this.value);
     });
 
+    // Currency → toggle rate group + live preview
+    document.getElementById('f-currency').addEventListener('change', function () {
+      toggleRateGroup(this.value);
+      updatePlnPreview();
+    });
+    document.getElementById('f-amount').addEventListener('input', updatePlnPreview);
+    document.getElementById('f-exchange-rate').addEventListener('input', updatePlnPreview);
+
     // Settlement slider
     document.getElementById('ratio-slider').addEventListener('input', function () {
       handleSliderChange(this.value);
@@ -538,6 +577,10 @@ window.App = (function () {
 
   function formatCurrency(amount) {
     return Number(amount).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+  }
+
+  function formatEur(amount) {
+    return Number(amount).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
   }
 
   function formatDate(iso) {
