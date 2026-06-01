@@ -599,4 +599,4 @@ window.App = (function () {
   return { init, navigateTo };
 })();
 
-document.addEventListener('DOMContentLoaded', App.init);
+document.addEventListener('DOMContentLoaded', () => Storage.initTrip().then(App.init));
