@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: trip-calculator-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    branch: claude/trip-calculator-quarkus-backend-at6Kk
+    healthCheckPath: /api/trips
+    envVars:
+      - key: DATABASE_URL
+        sync: false
