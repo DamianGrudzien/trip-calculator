@@ -313,6 +313,8 @@ window.App = (function () {
   // ── TRANSFER MODAL ────────────────────────────────────────
 
   function openTransferModal() {
+    const modal = document.getElementById('transfer-modal');
+    if (!modal) { console.error('transfer-modal not found'); return; }
     const state = Storage.load();
     const famSel = document.getElementById('tr-from-family');
     famSel.innerHTML = state.families.map(f => `<option value="${f.id}">${escHtml(f.name)}</option>`).join('');
