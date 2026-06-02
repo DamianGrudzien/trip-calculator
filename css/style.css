@@ -61,6 +61,42 @@ a { color: inherit; text-decoration: none; }
 .app-title { font-size: 1.1rem; font-weight: 700; }
 .header-total { font-size: .9rem; opacity: .9; font-weight: 600; }
 
+/* ── TRIP SWITCHER (header) ─────────────────────────────── */
+.header-left { display: flex; flex-direction: column; gap: 1px; }
+.trip-switcher-btn {
+  background: rgba(255,255,255,.18); border: none; color: #fff;
+  font-size: .75rem; border-radius: 6px; padding: 1px 6px;
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  max-width: 180px; text-align: left;
+}
+.trip-switcher-btn:hover { background: rgba(255,255,255,.28); }
+.trip-switcher-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── TRIP OVERLAY ───────────────────────────────────────── */
+.trip-overlay-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: var(--sp-md);
+}
+.trip-overlay-header h2 { font-size: 1.2rem; color: var(--primary); }
+.trip-list {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 52vh; overflow-y: auto; margin-bottom: var(--sp-md);
+}
+.trip-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border-radius: var(--radius);
+  background: var(--bg); border: 2px solid transparent;
+}
+.trip-card--active { border-color: var(--primary); background: var(--primary-light); }
+.trip-card-name { font-weight: 600; font-size: .95rem; }
+.trip-card-meta { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+.trip-card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.trip-active-badge { font-size: .72rem; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.btn-sm { padding: 4px 12px; font-size: .8rem; border-radius: var(--radius-sm); }
+
+/* ── NEW TRIP FORM ──────────────────────────────────────── */
+.trip-new-form { display: flex; flex-direction: column; gap: var(--sp-sm); margin-bottom: var(--sp-sm); }
+
 .tab-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h);
   background: var(--surface); border-top: 1px solid var(--border);

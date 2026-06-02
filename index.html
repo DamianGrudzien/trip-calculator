@@ -8,6 +8,26 @@
 </head>
 <body>
 
+<!-- ── TRIP SELECTOR OVERLAY ──────────────────────────────── -->
+<div id="trip-overlay" class="overlay hidden">
+  <div class="setup-card">
+    <div class="trip-overlay-header">
+      <h2>🗺️ Twoje wycieczki</h2>
+      <button id="btn-close-trips" class="btn-icon" title="Zamknij">✕</button>
+    </div>
+    <div id="trip-list" class="trip-list"></div>
+    <div class="trip-new-form hidden" id="trip-new-form">
+      <input id="trip-new-name" class="form-control" type="text" placeholder="Nazwa wycieczki" maxlength="80">
+      <input id="trip-new-dest" class="form-control" type="text" placeholder="Cel podróży (opcjonalnie)" maxlength="80">
+      <div class="modal-actions">
+        <button id="btn-trip-new-cancel" class="btn btn-secondary">Anuluj</button>
+        <button id="btn-trip-new-save" class="btn btn-primary">Utwórz</button>
+      </div>
+    </div>
+    <button id="btn-new-trip" class="btn btn-primary btn-full mt-md">+ Nowa wycieczka</button>
+  </div>
+</div>
+
 <!-- ── SETUP OVERLAY ─────────────────────────────────────── -->
 <div id="setup-overlay" class="overlay">
   <div class="setup-card">
@@ -47,7 +67,12 @@
 
   <!-- HEADER -->
   <header class="app-header">
-    <span class="app-title">🏖️ Wakacje</span>
+    <div class="header-left">
+      <span class="app-title">🏖️ Kalkulator</span>
+      <button id="btn-trip-switcher" class="trip-switcher-btn">
+        <span id="current-trip-name">Wakacje</span> ▾
+      </button>
+    </div>
     <span class="header-total" id="header-total">0,00 zł</span>
   </header>
 

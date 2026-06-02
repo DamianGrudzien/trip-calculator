@@ -21,6 +21,11 @@ window.Storage = (function () {
         const res = await fetch(`${API_BASE}/api/trips/${_tripId}/state`);
         if (res.ok) {
           _cache = _normalize(await res.json());
+          // Refresh stored name from server
+          fetch(`${API_BASE}/api/trips/${_tripId}`)
+            .then(r => r.json())
+            .then(t => localStorage.setItem('trip_calculator_trip_name', t.name))
+            .catch(() => {});
           _hideLoader();
           return _cache;
         }
@@ -31,17 +36,19 @@ window.Storage = (function () {
 
       // Look for existing trips or create one
       const trips = await fetch(`${API_BASE}/api/trips`).then(r => r.json());
+      let chosenTrip;
       if (trips.length > 0) {
-        _tripId = trips[0].id;
+        chosenTrip = trips[0];
       } else {
-        const trip = await fetch(`${API_BASE}/api/trips`, {
+        chosenTrip = await fetch(`${API_BASE}/api/trips`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: 'Wakacje' }),
         }).then(r => r.json());
-        _tripId = trip.id;
       }
+      _tripId = chosenTrip.id;
       localStorage.setItem(TRIP_ID_KEY, _tripId);
+      localStorage.setItem('trip_calculator_trip_name', chosenTrip.name);
 
       const state = await fetch(`${API_BASE}/api/trips/${_tripId}/state`).then(r => r.json());
       _cache = _normalize(state);
@@ -141,5 +148,36 @@ window.Storage = (function () {
     if (el) el.remove();
   }
 
-  return { initTrip, load, save, reset, generateId };
+  // ── Multi-trip API ───────────────────────────────────────────────────────
+
+  async function getTrips() {
+    return fetch(`${API_BASE}/api/trips`).then(r => r.json());
+  }
+
+  async function createTrip(name, destination) {
+    return fetch(`${API_BASE}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, destination: destination || null }),
+    }).then(r => r.json());
+  }
+
+  async function deleteTrip(tripId) {
+    return fetch(`${API_BASE}/api/trips/${tripId}`, { method: 'DELETE' });
+  }
+
+  async function switchTrip(tripId, tripName) {
+    _showLoader('Ładowanie wycieczki…');
+    _tripId = tripId;
+    localStorage.setItem(TRIP_ID_KEY, tripId);
+    if (tripName) localStorage.setItem('trip_calculator_trip_name', tripName);
+    const state = await fetch(`${API_BASE}/api/trips/${tripId}/state`).then(r => r.json());
+    _cache = _normalize(state);
+    _hideLoader();
+    return _cache;
+  }
+
+  function currentTripId() { return _tripId; }
+
+  return { initTrip, load, save, reset, generateId, getTrips, createTrip, deleteTrip, switchTrip, currentTripId };
 })();

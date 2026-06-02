@@ -16,6 +16,7 @@ window.App = (function () {
       showApp();
       navigateTo('dashboard');
     }
+    updateHeaderTripName();
     bindGlobalEvents();
   }
 
@@ -470,6 +471,50 @@ window.App = (function () {
     setTimeout(() => t.classList.remove('visible'), 2500);
   }
 
+  // ── TRIP SELECTOR ─────────────────────────────────────────
+
+  function updateHeaderTripName() {
+    const name = localStorage.getItem('trip_calculator_trip_name') || 'Wakacje';
+    const el = document.getElementById('current-trip-name');
+    if (el) el.textContent = name;
+  }
+
+  async function openTripSelector() {
+    await renderTripList();
+    document.getElementById('trip-overlay').classList.remove('hidden');
+  }
+
+  function closeTripSelector() {
+    document.getElementById('trip-overlay').classList.add('hidden');
+    document.getElementById('trip-new-form').classList.add('hidden');
+    document.getElementById('btn-new-trip').style.display = '';
+  }
+
+  async function renderTripList() {
+    const container = document.getElementById('trip-list');
+    container.innerHTML = '<p class="text-muted">Ładowanie…</p>';
+    const trips = await Storage.getTrips();
+    const currentId = Storage.currentTripId();
+    if (trips.length === 0) {
+      container.innerHTML = '<p class="empty-state">Brak wycieczek.</p>';
+      return;
+    }
+    container.innerHTML = trips.map(t => `
+      <div class="trip-card ${t.id === currentId ? 'trip-card--active' : ''}">
+        <div class="trip-card-info">
+          <div class="trip-card-name">${escHtml(t.name)}</div>
+          ${t.destination ? `<div class="trip-card-meta">📍 ${escHtml(t.destination)}</div>` : ''}
+        </div>
+        <div class="trip-card-actions">
+          ${t.id !== currentId
+            ? `<button class="btn btn-primary btn-sm" data-action="switch-trip" data-id="${t.id}" data-name="${escHtml(t.name)}">Wybierz</button>`
+            : `<span class="trip-active-badge">Aktywna</span>`}
+          <button class="btn btn-danger btn-sm" data-action="delete-trip" data-id="${t.id}" data-name="${escHtml(t.name)}" title="Usuń">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
   // ── EVENT BINDING ─────────────────────────────────────────
 
   function bindGlobalEvents() {
@@ -571,6 +616,79 @@ window.App = (function () {
     // Settings
     document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
     document.getElementById('btn-reset-data').addEventListener('click', resetData);
+
+    // Trip selector — open/close
+    document.getElementById('btn-trip-switcher').addEventListener('click', openTripSelector);
+    document.getElementById('btn-close-trips').addEventListener('click', closeTripSelector);
+
+    // Trip list — switch / delete (delegated)
+    document.getElementById('trip-list').addEventListener('click', async e => {
+      const sw  = e.target.closest('[data-action="switch-trip"]');
+      const del = e.target.closest('[data-action="delete-trip"]');
+
+      if (sw) {
+        await Storage.switchTrip(sw.dataset.id, sw.dataset.name);
+        closeTripSelector();
+        updateHeaderTripName();
+        const state = Storage.load();
+        if (!state.families || state.families.length < 2 || !state.families[0].name) {
+          showSetup();
+        } else {
+          showApp();
+          navigateTo('dashboard');
+        }
+      }
+
+      if (del) {
+        confirmAction(`Usunąć wycieczkę „${del.dataset.name}"? Tej operacji nie można cofnąć.`, async () => {
+          const isActive = del.dataset.id === Storage.currentTripId();
+          await Storage.deleteTrip(del.dataset.id);
+          if (isActive) {
+            const remaining = await Storage.getTrips();
+            if (remaining.length > 0) {
+              await Storage.switchTrip(remaining[0].id, remaining[0].name);
+              closeTripSelector();
+              updateHeaderTripName();
+              const state = Storage.load();
+              if (!state.families || state.families.length < 2 || !state.families[0].name) showSetup();
+              else { showApp(); navigateTo('dashboard'); }
+            } else {
+              // No trips left — create a fresh one
+              const trip = await Storage.createTrip('Wakacje');
+              await Storage.switchTrip(trip.id, trip.name);
+              closeTripSelector();
+              updateHeaderTripName();
+              showSetup();
+            }
+          } else {
+            await renderTripList();
+          }
+        });
+      }
+    });
+
+    // New trip form toggle
+    document.getElementById('btn-new-trip').addEventListener('click', () => {
+      document.getElementById('trip-new-form').classList.remove('hidden');
+      document.getElementById('btn-new-trip').style.display = 'none';
+      document.getElementById('trip-new-name').value = '';
+      document.getElementById('trip-new-dest').value = '';
+      document.getElementById('trip-new-name').focus();
+    });
+    document.getElementById('btn-trip-new-cancel').addEventListener('click', () => {
+      document.getElementById('trip-new-form').classList.add('hidden');
+      document.getElementById('btn-new-trip').style.display = '';
+    });
+    document.getElementById('btn-trip-new-save').addEventListener('click', async () => {
+      const name = document.getElementById('trip-new-name').value.trim();
+      if (!name) { document.getElementById('trip-new-name').focus(); return; }
+      const dest = document.getElementById('trip-new-dest').value.trim();
+      const trip = await Storage.createTrip(name, dest);
+      await Storage.switchTrip(trip.id, trip.name);
+      closeTripSelector();
+      updateHeaderTripName();
+      showSetup();
+    });
   }
 
   // ── HELPERS ───────────────────────────────────────────────
