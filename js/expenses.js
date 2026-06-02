@@ -7,12 +7,14 @@ window.Expenses = (function () {
     { id: 'entertainment', emoji: '🎡', label: 'Atrakcje',   color: '#EC4899' },
     { id: 'shopping',      emoji: '🛒', label: 'Zakupy',     color: '#10B981' },
     { id: 'other',         emoji: '💼', label: 'Inne',       color: '#6B7280' },
+    { id: 'transfer',      emoji: '🔄', label: 'Przelew',    color: '#A855F7' },
   ];
 
   const INCOME_CATEGORIES = [
     { id: 'refund',        emoji: '💸', label: 'Zwrot',          color: '#14B8A6' },
     { id: 'contribution',  emoji: '💵', label: 'Wkład własny',   color: '#22C55E' },
     { id: 'other_income',  emoji: '📥', label: 'Inne przychody', color: '#A3E635' },
+    { id: 'transfer',      emoji: '🔄', label: 'Przelew',        color: '#A855F7' },
   ];
 
   function getExpenseCategory(id) {
@@ -152,12 +154,17 @@ window.Expenses = (function () {
     const { families, expenses, incomes, settings } = state;
     const ratios = settings.splitRatio;
 
-    const expenseTotal = expenses.reduce((s, e) => s + e.amountPLN, 0);
-    const incomeTotal  = incomes.reduce((s, i) => s + i.amountPLN, 0);
+    // Transfers are internal (family-to-family) — exclude from trip totals
+    // but include in per-family paid/received so balances adjust correctly.
+    const realExpenses = expenses.filter(e => e.category !== 'transfer');
+    const realIncomes  = incomes.filter(i => i.category !== 'transfer');
+
+    const expenseTotal = realExpenses.reduce((s, e) => s + e.amountPLN, 0);
+    const incomeTotal  = realIncomes.reduce((s, i) => s + i.amountPLN, 0);
     const netTotal     = expenseTotal - incomeTotal;
 
     const result = families.map((fam, idx) => {
-      const paid     = expenses.filter(e => e.paidByFamily === fam.id).reduce((s, e) => s + e.amountPLN, 0);
+      const paid     = expenses.filter(e => e.paidByFamily    === fam.id).reduce((s, e) => s + e.amountPLN, 0);
       const received = incomes.filter(i => i.receivedByFamily === fam.id).reduce((s, i) => s + i.amountPLN, 0);
       const netContrib = paid - received;
       const fairShare  = netTotal * (ratios[idx] / 100);

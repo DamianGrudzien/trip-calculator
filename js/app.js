@@ -268,6 +268,99 @@ window.App = (function () {
         </td>
       </tr>
     `).join('');
+
+    renderPartialPayments();
+  }
+
+  function renderPartialPayments() {
+    const state = Storage.load();
+    const transfers = state.expenses.filter(e => e.category === 'transfer');
+    const container = document.getElementById('partial-payments-list');
+    if (transfers.length === 0) { container.innerHTML = ''; return; }
+
+    const familyName = id => (state.families.find(f => f.id === id) || {}).name || id;
+    // For each transfer expense, find the matching income to get receiver name
+    const rows = transfers.map(t => {
+      const matchIncome = state.incomes.find(i =>
+        i.category === 'transfer' && i.date === t.date && Math.abs(i.amountPLN - t.amountPLN) < 0.01
+      );
+      const toName = matchIncome ? familyName(matchIncome.receivedByFamily) : '?';
+      const amtDisplay = t.currency === 'EUR' ? formatEur(t.amount) : formatCurrency(t.amountPLN);
+      return `
+        <div class="transaction-item">
+          <div class="cat-badge" style="background:#A855F720;color:#A855F7">🔄</div>
+          <div class="transaction-info">
+            <div class="transaction-desc">${escHtml(familyName(t.paidByFamily))} → ${escHtml(toName)}</div>
+            <div class="transaction-meta">${formatDate(t.date)}</div>
+          </div>
+          <div class="transaction-right">
+            <div class="transaction-amount">${amtDisplay}</div>
+            <div class="transaction-actions">
+              <button class="btn-icon btn-icon-danger" data-action="delete-transfer-pair"
+                data-date="${t.date}" data-amount="${t.amountPLN}" title="Usuń">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="card mt-md">
+        <div class="section-header"><h3>Częściowe zwroty</h3></div>
+        ${rows}
+      </div>`;
+  }
+
+  // ── TRANSFER MODAL ────────────────────────────────────────
+
+  function openTransferModal() {
+    const state = Storage.load();
+    const famSel = document.getElementById('tr-from-family');
+    famSel.innerHTML = state.families.map(f => `<option value="${f.id}">${escHtml(f.name)}</option>`).join('');
+    document.getElementById('tr-amount').value = '';
+    document.getElementById('tr-currency').value = 'PLN';
+    document.getElementById('tr-rate-group').style.display = 'none';
+    document.getElementById('tr-exchange-rate').value = state.settings.defaultEurRate || 4.25;
+    document.getElementById('tr-date').value = todayISO();
+    document.getElementById('tr-error').textContent = '';
+    showModal('transfer-modal');
+  }
+
+  function handleTransferFormSubmit(e) {
+    e.preventDefault();
+    const state = Storage.load();
+    const fromFamilyId = document.getElementById('tr-from-family').value;
+    const amount = parseFloat(document.getElementById('tr-amount').value);
+    const currency = document.getElementById('tr-currency').value;
+    const exchangeRate = currency === 'EUR' ? (parseFloat(document.getElementById('tr-exchange-rate').value) || 1) : 1.0;
+    const amountPLN = amount * exchangeRate;
+    const date = document.getElementById('tr-date').value;
+    const errEl = document.getElementById('tr-error');
+
+    if (!amount || amount <= 0) { errEl.textContent = 'Podaj poprawną kwotę.'; return; }
+    if (!date) { errEl.textContent = 'Podaj datę.'; return; }
+
+    const toFamily = state.families.find(f => f.id !== fromFamilyId);
+    const fromFamily = state.families.find(f => f.id === fromFamilyId);
+    if (!toFamily) { errEl.textContent = 'Brak drugiej rodziny.'; return; }
+
+    const desc = `Zwrot: ${fromFamily.name} → ${toFamily.name}`;
+
+    // Expense for the paying family (reduces their surplus / covers their debt)
+    Expenses.addExpense({
+      description: desc, amount, currency, exchangeRate, amountPLN,
+      category: 'transfer', paidByFamily: fromFamilyId,
+      paidByPerson: fromFamily.members[0] || '', date,
+    });
+    // Income for the receiving family (mirrors the payment)
+    Expenses.addIncome({
+      description: desc, amount, currency, exchangeRate, amountPLN,
+      category: 'transfer', receivedByFamily: toFamily.id,
+      receivedByPerson: toFamily.members[0] || '', date,
+    });
+
+    closeModal('transfer-modal');
+    renderSettlement();
+    showToast('Częściowy zwrot zapisany.');
   }
 
   function handleSliderChange(val) {
@@ -578,6 +671,7 @@ window.App = (function () {
       bd.addEventListener('click', () => {
         closeModal('expense-modal');
         closeModal('confirm-modal');
+        closeModal('transfer-modal');
       });
     });
 
@@ -617,6 +711,32 @@ window.App = (function () {
     document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
     document.getElementById('btn-reset-data').addEventListener('click', resetData);
 
+    // Transfer (partial payment)
+    document.getElementById('btn-add-transfer').addEventListener('click', openTransferModal);
+    document.getElementById('btn-cancel-transfer').addEventListener('click', () => closeModal('transfer-modal'));
+    document.getElementById('transfer-form').addEventListener('submit', handleTransferFormSubmit);
+    document.getElementById('tr-currency').addEventListener('change', function () {
+      document.getElementById('tr-rate-group').style.display = this.value === 'EUR' ? '' : 'none';
+    });
+    document.getElementById('partial-payments-list').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-transfer-pair"]');
+      if (!btn) return;
+      confirmAction('Usunąć ten częściowy zwrot?', () => {
+        const state = Storage.load();
+        const targetAmt = parseFloat(btn.dataset.amount);
+        const targetDate = btn.dataset.date;
+        // Remove matching expense
+        state.expenses = state.expenses.filter(ex =>
+          !(ex.category === 'transfer' && ex.date === targetDate && Math.abs(ex.amountPLN - targetAmt) < 0.01)
+        );
+        // Remove matching income
+        state.incomes = state.incomes.filter(inc =>
+          !(inc.category === 'transfer' && inc.date === targetDate && Math.abs(inc.amountPLN - targetAmt) < 0.01)
+        );
+        Storage.save(state);
+        renderSettlement();
+      });
+    });
     // Trip selector — open/close
     document.getElementById('btn-trip-switcher').addEventListener('click', openTripSelector);
     document.getElementById('btn-close-trips').addEventListener('click', closeTripSelector);

@@ -160,6 +160,12 @@
           <tbody id="sett-table-body"></tbody>
         </table>
       </div>
+
+      <div id="partial-payments-list"></div>
+
+      <button id="btn-add-transfer" class="btn btn-secondary btn-full mt-md">
+        🔄 Dodaj częściowy zwrot między rodzinami
+      </button>
     </section>
 
     <!-- ── STATYSTYKI ─────────────────────────────────── -->
@@ -319,6 +325,43 @@
 </div>
 
 <!-- ── CONFIRM MODAL ─────────────────────────────────────── -->
+<!-- ── TRANSFER MODAL ─────────────────────────────────────── -->
+<div id="transfer-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content">
+    <h3 class="modal-title">🔄 Częściowy zwrot</h3>
+    <form id="transfer-form" novalidate>
+      <div class="form-group">
+        <label for="tr-from-family">Kto płaci</label>
+        <select id="tr-from-family" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label for="tr-amount">Kwota</label>
+        <div style="display:flex;gap:8px">
+          <input id="tr-amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0,00" required style="flex:1">
+          <select id="tr-currency" class="form-control" style="width:90px">
+            <option value="PLN">PLN</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" id="tr-rate-group" style="display:none">
+        <label for="tr-exchange-rate">Kurs EUR → PLN</label>
+        <input id="tr-exchange-rate" class="form-control" type="number" min="0.01" step="0.01" value="4.25">
+      </div>
+      <div class="form-group">
+        <label for="tr-date">Data</label>
+        <input id="tr-date" class="form-control" type="date" required>
+      </div>
+      <div id="tr-error" class="form-error"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-transfer" class="btn btn-secondary">Anuluj</button>
+        <button type="submit" class="btn btn-primary">Zapisz</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-backdrop"></div>
   <div class="modal-content modal-content--sm">
